@@ -20,7 +20,7 @@ jobs:
             target: --linux
           - os: macos-14 # Apple Silicon runner
             target: --mac --arm64
-          - os: windows-latest
+          - os: windows-2022 # VS 2022; node-gyp doesn't recognize the VS 2026 on windows-latest yet
             target: --win --x64
     runs-on: ${{ matrix.os }}
     env:
@@ -36,7 +36,9 @@ jobs:
 
       - run: npm ci
         working-directory: frontend
-      - run: npm ci
+      # Backend code is bundled into the app; its native SQLite build isn't used
+      # (the desktop package ships its own, rebuilt for Electron), so skip it
+      - run: npm ci --ignore-scripts
         working-directory: backend
       - run: npm ci
         working-directory: desktop
