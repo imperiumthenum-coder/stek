@@ -32,8 +32,9 @@ Stek isn't code-signed yet, so your OS will ask you to confirm once:
 
 - **Charts:** 1m, 5m, 15m, 30m, 1h, daily, weekly and monthly candles, with search across stocks, ETFs, mutual funds, indexes, crypto, FX and futures.
 - **Drawing tools:** trendlines, rays, horizontal and vertical lines, parallel and price channels, Fibonacci retracement, rectangles, circles, half circles, triangles, parallelograms, freehand brush and notes. Drawings save automatically per symbol and stay put across timeframes.
-- **Indicators:** MA, EMA, Bollinger Bands, SAR, volume, MACD, RSI, KDJ, OBV, CCI and Williams %R.
+- **Indicators:** MA, EMA, 125-day SMA, Bollinger Bands, SAR, volume, 125-day momentum, MACD, RSI, KDJ, OBV, CCI and Williams %R.
 - **Bar replay:** step through history from any start date.
+- **Market Pulse:** a Fear & Greed-style score built from SPY and QQQ momentum (vs their 125-day moving averages), stock price strength (net new 52-week highs vs lows), breadth (% of stocks above their 50-day average), VIX, safe-haven demand and junk bond demand, each with a year of history. Breadth uses ~100 large-cap US stocks as a stand-in for the whole market.
 - **Watchlist:** watchlist symbols are kept synced in the background, so they open instantly.
 - **Local storage:** price history is cached on your machine and keeps growing past what the data source keeps (for example, 1-minute bars beyond 30 days).
 - **Phone-friendly layout** when served to a phone's browser (see [Self-hosting](#self-hosting)).
