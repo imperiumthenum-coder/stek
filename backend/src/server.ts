@@ -62,9 +62,9 @@ export async function startServer(opts: ServerOptions) {
   // Fear & Greed-style market gauges (momentum, new highs/lows, breadth, VIX, ...)
   const pulse = new MarketPulse(history);
   const pulseTimer = pulse.start();
-  app.get('/api/market-pulse', (_req, res) => {
+  app.get('/api/market-pulse', (req, res) => {
     try {
-      res.json(pulse.compute());
+      res.json(pulse.compute(String(req.query.range || '1Y')));
     } catch (e) {
       console.error('market pulse error:', e);
       res.status(500).json({ ready: false, message: 'Could not compute market data' });

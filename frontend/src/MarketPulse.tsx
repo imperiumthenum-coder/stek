@@ -22,7 +22,10 @@ type Pulse =
       ready: true;
       asOf: number;
       universe: { covered: number; total: number };
+      range: string;
+      ranges: string[];
       composite: { score: number; rating: Rating; history: Point[] };
+      index: { symbol: string; name: string; history: Point[] };
       components: Component[];
     };
 
@@ -158,6 +161,184 @@ function Meter({ score }: { score: number }) {
   );
 }
 
+const RANGE_LABEL: Record<string, string> = {
+  '1M': 'Past month', '6M': 'Past 6 months', '1Y': 'Past year', '5Y': 'Past 5 years', '10Y': 'Past 10 years', '25Y': 'Past 25 years',
+};
+const INDEX_COLOR = '#f59e0b';
+
+// Nearest point to time t (points sorted by t)
+function nearest(points: Point[], t: number) {
+  let lo = 0;
+  let hi = points.length - 1;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (points[mid].t < t) lo = mid;
+    else hi = mid;
+  }
+  return Math.abs(points[lo].t - t) <= Math.abs(points[hi].t - t) ? points[lo] : points[hi];
+}
+
+// Fear & Greed score above, a US index below: separate y-scales (never one dual-axis
+// chart), one shared time axis and crosshair so you can read both on any day.
+function ScoreVsIndex({ score, index, symbol, range }: { score: Point[]; index: Point[]; symbol: string; range: string }) {
+  const [hoverT, setHoverT] = useState<number | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
+  if (score.length < 2) return null;
+
+  const t0 = Math.min(score[0].t, index[0]?.t ?? Infinity);
+  const t1 = Math.max(score[score.length - 1].t, index[index.length - 1]?.t ?? -Infinity);
+  const W = 600;
+  const pct = (t: number) => ((t - t0) / (t1 - t0 || 1)) * 100;
+  const x = (t: number) => (pct(t) / 100) * W;
+
+  const pane = (points: Point[], H: number, lo: number, hi: number, color: string, refs: number[], log = false, overlay?: Point[]) => {
+    const f = (v: number) => (log ? Math.log(v) : v);
+    const y = (v: number) => 4 + (1 - (f(v) - f(lo)) / (f(hi) - f(lo) || 1)) * (H - 8);
+    const d = points.map((p, i) => `${i ? 'L' : 'M'}${x(p.t).toFixed(1)},${y(p.v).toFixed(1)}`).join('');
+    return { y, H, svg: (
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="w-full block" style={{ height: H }} aria-hidden="true">
+        {refs.map((r) => (
+          <line key={r} x1="0" x2={W} y1={y(r)} y2={y(r)} stroke="#374151" strokeWidth="1" strokeDasharray={r === 50 ? '3 3' : undefined} vectorEffect="non-scaling-stroke" />
+        ))}
+        <path d={d} fill="none" stroke={color} strokeWidth={overlay ? 1.25 : 2} strokeOpacity={overlay ? 0.4 : 1} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+        {overlay && overlay.length > 1 && (
+          <path
+            d={overlay.map((p, i) => `${i ? 'L' : 'M'}${x(p.t).toFixed(1)},${y(p.v).toFixed(1)}`).join('')}
+            fill="none" stroke={color} strokeWidth="2.5" strokeLinejoin="round" vectorEffect="non-scaling-stroke"
+          />
+        )}
+        {hoverT !== null && <line x1={x(hoverT)} x2={x(hoverT)} y1="0" y2={H} stroke="#9ca3af" strokeWidth="1" vectorEffect="non-scaling-stroke" />}
+      </svg>
+    ) };
+  };
+
+  // Over years, compounding squashes early prices on a linear scale; log shows equal % moves equally
+  const logScale = ['5Y', '10Y', '25Y'].includes(range);
+  // The score turns over every few weeks; over years a 3-month average shows the regimes
+  const smooth = logScale
+    ? score.map((p) => {
+        const win = score.filter((q) => q.t <= p.t && q.t > p.t - 91 * 86_400_000);
+        return { t: p.t, v: win.reduce((a, q) => a + q.v, 0) / win.length };
+      })
+    : undefined;
+  const iv = index.map((p) => p.v);
+  const iLo = Math.min(...iv);
+  const iHi = Math.max(...iv);
+  const [bLo, bHi] = logScale ? [iLo / 1.04, iHi * 1.04] : [iLo - (iHi - iLo) * 0.06, iHi + (iHi - iLo) * 0.06];
+  const top = pane(score, 130, 0, 100, LINE, [25, 50, 75], false, smooth);
+  const bottom = index.length > 1 ? pane(index, 100, bLo, bHi, INDEX_COLOR, [], logScale) : null;
+  const change = index.length > 1 ? (index[index.length - 1].v / index[0].v - 1) * 100 : NaN;
+
+  const sp = hoverT !== null ? nearest(score, hoverT) : null;
+  const avgP = hoverT !== null && smooth ? nearest(smooth, hoverT) : null;
+  const ip = hoverT !== null && index.length ? nearest(index, hoverT) : null;
+  const onMove = (clientX: number) => {
+    const r = ref.current!.getBoundingClientRect();
+    const f = Math.max(0, Math.min(1, (clientX - r.left) / r.width));
+    setHoverT(nearest(score, t0 + f * (t1 - t0)).t);
+  };
+  // A few dated ticks along the shared axis
+  const ticks = [0, 0.25, 0.5, 0.75, 1].map((f) => t0 + f * (t1 - t0));
+  const long = ['5Y', '10Y', '25Y'].includes(range);
+  const tickLabel = (t: number) =>
+    new Date(t).toLocaleDateString(undefined, long ? { year: 'numeric', timeZone: 'UTC' } : { month: 'short', day: 'numeric', timeZone: 'UTC' });
+
+  return (
+    <div>
+      <div
+        ref={ref}
+        className="relative touch-none cursor-crosshair select-none"
+        onMouseMove={(e) => onMove(e.clientX)}
+        onMouseLeave={() => setHoverT(null)}
+        onTouchMove={(e) => onMove(e.touches[0].clientX)}
+        onTouchEnd={() => setHoverT(null)}
+        role="img"
+        aria-label={`Fear and Greed score and ${symbol} price, ${RANGE_LABEL[range]?.toLowerCase()}`}
+      >
+        <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1">
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block w-3 h-0.5 rounded" style={{ background: LINE, opacity: smooth ? 0.4 : 1 }} /> Fear &amp; Greed score
+            {smooth && (
+              <>
+                <span className="inline-block w-3 h-[3px] rounded ml-2" style={{ background: LINE }} /> 3-month average
+              </>
+            )}
+          </span>
+          <span className="text-slate-500">25 fear · 50 neutral · 75 greed</span>
+        </div>
+        <div className="relative">
+          {top.svg}
+          {sp && (
+            <div className="absolute w-2.5 h-2.5 rounded-full border-2 pointer-events-none"
+              style={{ left: `calc(${pct(sp.t)}% - 5px)`, top: top.y(sp.v) - 5, background: LINE, borderColor: '#1e222d' }} />
+          )}
+        </div>
+        {bottom && (
+          <>
+            <div className="flex items-center justify-between text-[11px] text-slate-400 mt-3 mb-1">
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block w-3 h-0.5 rounded" style={{ background: INDEX_COLOR }} /> {symbol} price
+                {logScale && <span className="text-slate-500">(log scale)</span>}
+              </span>
+              <span className="tabular-nums text-slate-400">
+                {Number.isFinite(change) && `${change >= 0 ? '+' : ''}${change.toFixed(1)}% over ${range}`}
+              </span>
+            </div>
+            <div className="relative">
+              {bottom.svg}
+              {ip && (
+                <div className="absolute w-2.5 h-2.5 rounded-full border-2 pointer-events-none"
+                  style={{ left: `calc(${pct(ip.t)}% - 5px)`, top: bottom.y(ip.v) - 5, background: INDEX_COLOR, borderColor: '#1e222d' }} />
+              )}
+            </div>
+          </>
+        )}
+        <div className="relative h-4 mt-1 text-[10px] text-slate-500">
+          {ticks.map((t, i) => (
+            <span key={i} className="absolute whitespace-nowrap"
+              style={{ left: `${(i / 4) * 100}%`, transform: `translateX(${i === 0 ? '0' : i === 4 ? '-100%' : '-50%'})` }}>
+              {tickLabel(t)}
+            </span>
+          ))}
+        </div>
+
+        {sp && (
+          <div
+            className="absolute top-5 px-2.5 py-1.5 rounded bg-[#0b0e14] border border-[#2a2e39] text-[11px] text-white whitespace-nowrap pointer-events-none z-10 space-y-0.5"
+            style={{ left: `${pct(sp.t)}%`, transform: `translateX(${pct(sp.t) > 55 ? 'calc(-100% - 10px)' : '10px'})` }}
+          >
+            <div className="text-slate-400">{fmtDate(sp.t)}</div>
+            <div className="flex items-center gap-1.5">
+              <span className="inline-block w-2 h-2 rounded-full" style={{ background: LINE }} />
+              Score <span className="font-semibold tabular-nums">{Math.round(sp.v)}</span>
+              <span className="text-slate-400">{scoreRating(sp.v)}</span>
+            </div>
+            {avgP && (
+              <div className="text-slate-400 pl-3.5">
+                3-mo avg <span className="text-white tabular-nums">{Math.round(avgP.v)}</span>
+              </div>
+            )}
+            {ip && (
+              <div className="flex items-center gap-1.5">
+                <span className="inline-block w-2 h-2 rounded-full" style={{ background: INDEX_COLOR }} />
+                {symbol} <span className="font-semibold tabular-nums">${ip.v.toFixed(2)}</span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function scoreRating(v: number): Rating {
+  if (v < 25) return 'Extreme Fear';
+  if (v < 45) return 'Fear';
+  if (v <= 55) return 'Neutral';
+  if (v <= 75) return 'Greed';
+  return 'Extreme Greed';
+}
+
 const CHART_FOR: Record<string, string> = { 'momentum-spy': 'SPY', 'momentum-qqq': 'QQQ', volatility: '^VIX' };
 
 export default function MarketPulse({ open, onClose, onOpenChart }: {
@@ -167,15 +348,23 @@ export default function MarketPulse({ open, onClose, onOpenChart }: {
 }) {
   const [data, setData] = useState<Pulse | null>(null);
   const [error, setError] = useState(false);
+  const [range, setRange] = useState(() => {
+    try {
+      return localStorage.getItem('oc.pulseRange') || '1Y';
+    } catch {
+      return '1Y';
+    }
+  });
+  const [loadingRange, setLoadingRange] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
     const load = () =>
-      fetch('/api/market-pulse')
+      fetch(`/api/market-pulse?range=${range}`)
         .then((r) => r.json())
-        .then((d) => !cancelled && (setData(d), setError(false)))
-        .catch(() => !cancelled && setError(true));
+        .then((d) => !cancelled && (setData(d), setError(false), setLoadingRange(false)))
+        .catch(() => !cancelled && (setError(true), setLoadingRange(false)));
     load();
     // Refresh while open; faster while the first download is still filling in
     const t = window.setInterval(load, data && data.ready && data.universe.covered >= data.universe.total ? 300_000 : 10_000);
@@ -183,7 +372,18 @@ export default function MarketPulse({ open, onClose, onOpenChart }: {
       cancelled = true;
       window.clearInterval(t);
     };
-  }, [open, data && data.ready && data.universe.covered >= data.universe.total]);
+  }, [open, range, data && data.ready && data.universe.covered >= data.universe.total]);
+
+  const pickRange = (r: string) => {
+    if (r === range) return;
+    setLoadingRange(true);
+    setRange(r);
+    try {
+      localStorage.setItem('oc.pulseRange', r);
+    } catch {
+      /* prefs just won't persist */
+    }
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -230,23 +430,44 @@ export default function MarketPulse({ open, onClose, onOpenChart }: {
               )}
 
               {/* Composite */}
-              <div className="grid md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] gap-5 bg-[#1e222d] border border-[#2a2e39] rounded-xl p-4 md:p-5 mb-4">
-                <div>
-                  <div className="text-xs uppercase tracking-wider text-slate-400 font-semibold">Fear &amp; Greed score</div>
-                  <div className="flex items-end gap-3 mt-1">
-                    <span className="text-6xl font-bold text-white leading-none tabular-nums">{data.composite.score}</span>
-                    <span className="mb-1.5">
-                      <RatingBadge rating={data.composite.rating} />
-                    </span>
+              <div className="bg-[#1e222d] border border-[#2a2e39] rounded-xl p-4 md:p-5 mb-4">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="min-w-[220px] flex-1 max-w-sm">
+                    <div className="text-xs uppercase tracking-wider text-slate-400 font-semibold">Fear &amp; Greed score</div>
+                    <div className="flex items-end gap-3 mt-1">
+                      <span className="text-6xl font-bold text-white leading-none tabular-nums">{data.composite.score}</span>
+                      <span className="mb-1.5">
+                        <RatingBadge rating={data.composite.rating} />
+                      </span>
+                    </div>
+                    <div className="mt-4">
+                      <Meter score={data.composite.score} />
+                    </div>
                   </div>
-                  <div className="mt-4">
-                    <Meter score={data.composite.score} />
+                  <div className="flex items-center gap-0.5 bg-[#131722] p-1 rounded-lg border border-[#2a2e39]" role="group" aria-label="History range">
+                    {(data.ranges ?? ['1M', '6M', '1Y', '5Y', '10Y', '25Y']).map((r) => (
+                      <button
+                        key={r}
+                        onClick={() => pickRange(r)}
+                        aria-pressed={range === r}
+                        className={`px-2.5 py-1 text-xs font-medium rounded-md transition ${
+                          range === r ? 'bg-[#2962ff] text-white' : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        {r}
+                      </button>
+                    ))}
                   </div>
                 </div>
-                <div>
-                  <div className="text-[11px] text-slate-400 mb-1">Past year (50 = neutral)</div>
-                  <Sparkline points={data.composite.history} unit="score" zero={false} range={[0, 100]} height={110} />
+                <div className={`mt-5 transition-opacity ${loadingRange ? 'opacity-40' : ''}`}>
+                  <ScoreVsIndex score={data.composite.history} index={data.index.history} symbol={data.index.symbol} range={data.range} />
                 </div>
+                {['10Y', '25Y'].includes(data.range) && (
+                  <p className="text-[11px] text-slate-500 mt-3">
+                    Older years use the gauges that existed then (junk-bond demand starts in 2007) and today's large caps for
+                    breadth, so the early score is an approximation.
+                  </p>
+                )}
               </div>
 
               {/* Components */}

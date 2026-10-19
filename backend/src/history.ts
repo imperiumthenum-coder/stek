@@ -106,6 +106,7 @@ export class HistoryStore {
   private inflight = new Map<string, Promise<void>>();
   private pausedUntil = 0; // set when Yahoo rate-limits us
   private backfilled = new Set<string>(); // 1m backfill attempted this run
+  private extended = new Set<string>(); // long backfill attempted this run
 
   private q: Record<string, import('better-sqlite3').Statement>;
 
@@ -195,6 +196,29 @@ export class HistoryStore {
 
     this.inflight.set(key, job);
     return job;
+  }
+
+  // Extend a series further back than its first fetch (e.g. 3 years -> 25+ years).
+  // Runs once per symbol per process; symbols that start later than `fromMs`
+  // (newer listings) simply stay as they are.
+  async backfill(symbol: string, interval: string, fromMs: number): Promise<boolean> {
+    const key = `${symbol}:${interval}`;
+    if (this.extended.has(key) || Date.now() < this.pausedUntil) return false;
+    const oldest = (this.q.oldest.get(symbol, interval) as { t: number | null }).t;
+    if (oldest == null) return false; // nothing stored yet; sync() fetches first
+    this.extended.add(key);
+    if (oldest <= fromMs + 30 * 86_400_000) return false;
+    try {
+      const candles = await fetchYahoo(symbol, interval, periodSpan(fromMs, oldest), oldest);
+      this.store(symbol, interval, candles, { from: fromMs, to: oldest - 1 });
+      return candles.length > 0;
+    } catch (e) {
+      if (e instanceof RateLimitedError) {
+        this.pausedUntil = Date.now() + 5 * 60_000;
+        this.extended.delete(key); // retry later
+      }
+      return false;
+    }
   }
 
   // Yahoo only serves 1m bars in ≤7-day windows going back ~30 days. Pull the older
