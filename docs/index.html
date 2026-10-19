@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Stek</title>
+  <meta name="description" content="Stek is a free, open-source charting and technical analysis app for macOS (Apple Silicon), Windows and Linux." />
+  <link rel="icon" type="image/png" href="favicon.png" />
+  <meta property="og:title" content="Stek: open-source charting" />
+  <meta property="og:description" content="Free charting and technical analysis for macOS, Windows and Linux." />
+  <meta property="og:image" content="https://imperiumthenum-coder.github.io/stek/screenshot.png" />
+  <style>
+    :root {
+      --bg: #0e1118;
+      --panel: #161b26;
+      --panel-2: #1e2430;
+      --line: #2a2f3c;
+      --text: #e6e8ee;
+      --muted: #8b93a7;
+      --accent: #34d399;
+      --accent-ink: #052e1f;
+      --blue: #2962ff;
+      --radius: 12px;
+      color-scheme: dark;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
+
+    header.top { display: flex; align-items: center; justify-content: space-between; padding: 18px 0; }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; text-decoration: none; }
+    .brand img { width: 30px; height: 30px; }
+    .top nav a { color: var(--muted); text-decoration: none; margin-left: 20px; font-size: 15px; }
+    .top nav a:hover { color: var(--text); }
+
+    .hero { text-align: center; padding: 48px 0 28px; }
+    .hero img.logo { width: 96px; height: 96px; }
+    h1 { font-size: clamp(34px, 6vw, 54px); line-height: 1.1; margin: 16px 0 12px; letter-spacing: -0.02em; }
+    .tagline { color: var(--muted); font-size: clamp(17px, 2.4vw, 20px); max-width: 640px; margin: 0 auto 30px; }
+
+    .dl { display: inline-flex; flex-direction: column; align-items: center; gap: 10px; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: var(--accent); color: var(--accent-ink);
+      font-weight: 700; font-size: 18px; text-decoration: none;
+      padding: 15px 28px; border-radius: 999px;
+      box-shadow: 0 8px 30px rgba(52, 211, 153, 0.25);
+      transition: transform .12s ease, box-shadow .12s ease;
+    }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 10px 36px rgba(52, 211, 153, 0.35); }
+    .btn svg { width: 20px; height: 20px; }
+    .meta { color: var(--muted); font-size: 14px; }
+    .meta a { color: var(--muted); }
+    .note { color: #fbbf24; font-size: 14px; max-width: 520px; }
+
+    .shot { margin: 40px auto 0; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--line);
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5); }
+    .shot img { display: block; width: 100%; height: auto; }
+
+    section { padding: 56px 0 8px; }
+    h2 { font-size: 26px; margin: 0 0 20px; letter-spacing: -0.01em; }
+
+    .platforms { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; }
+    .card.current { border-color: var(--accent); }
+    .card h3 { margin: 0 0 4px; font-size: 17px; }
+    .card .sub { color: var(--muted); font-size: 14px; margin-bottom: 12px; }
+    .card a.file { display: flex; justify-content: space-between; gap: 8px; text-decoration: none; background: var(--panel-2);
+                   border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; margin-top: 8px; font-size: 14px; }
+    .card a.file:hover { border-color: var(--blue); }
+    .card a.file span:last-child { color: var(--muted); white-space: nowrap; }
+
+    .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+    .feature { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; }
+    .feature h3 { margin: 0 0 6px; font-size: 16px; }
+    .feature p { margin: 0; color: var(--muted); font-size: 15px; }
+
+    details { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 18px; margin-bottom: 10px; }
+    summary { cursor: pointer; font-weight: 600; }
+    details p, details li { color: var(--muted); font-size: 15px; }
+    code { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; font-size: 14px; color: var(--text);
+           word-break: break-all; }
+
+    footer { color: var(--muted); font-size: 14px; padding: 56px 0 40px; text-align: center; }
+    footer p { margin: 6px 0; }
+
+    @media (max-width: 560px) {
+      .top nav a:not(.gh) { display: none; }
+      .btn { font-size: 16px; padding: 14px 22px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <a class="brand" href="./"><img src="favicon.png" alt="" />Stek</a>
+      <nav>
+        <a href="#download">Download</a>
+        <a href="#features">Features</a>
+        <a class="gh" href="https://github.com/imperiumthenum-coder/stek">GitHub</a>
+      </nav>
+    </header>
+
+    <div class="hero">
+      <img class="logo" src="icon.png" alt="Stek icon" />
+      <h1>Charts, your way.</h1>
+      <p class="tagline">Free, open-source charting and technical analysis for your desktop. Stocks, ETFs, mutual funds, crypto, FX and futures.</p>
+
+      <div class="dl">
+        <!-- Works without JavaScript: falls back to the releases page -->
+        <a id="primary" class="btn" href="https://github.com/imperiumthenum-coder/stek/releases/latest">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+          <span id="primary-label">Download Stek</span>
+        </a>
+        <div id="primary-meta" class="meta">macOS (Apple Silicon) · Windows · Linux</div>
+        <div id="primary-note" class="note" hidden></div>
+      </div>
+
+      <div class="shot"><img src="screenshot.png" width="1440" height="900" alt="Stek showing an NVIDIA daily chart with a Fibonacci retracement, volume, RSI and MACD" /></div>
+    </div>
+
+    <section id="download">
+      <h2>All downloads</h2>
+      <div class="platforms">
+        <div class="card" data-os="mac">
+          <h3>macOS</h3>
+          <div class="sub">Apple Silicon (M1 and newer)</div>
+          <div class="files" data-files="mac"></div>
+        </div>
+        <div class="card" data-os="windows">
+          <h3>Windows</h3>
+          <div class="sub">Windows 10 / 11, 64-bit</div>
+          <div class="files" data-files="windows"></div>
+        </div>
+        <div class="card" data-os="linux">
+          <h3>Linux</h3>
+          <div class="sub">64-bit · AppImage or .deb (Ubuntu, Debian)</div>
+          <div class="files" data-files="linux"></div>
+        </div>
+      </div>
+      <p class="meta" id="release-line" style="margin-top:14px">
+        Older versions and release notes are on <a href="https://github.com/imperiumthenum-coder/stek/releases">GitHub Releases</a>.
+      </p>
+    </section>
+
+    <section id="first-launch">
+      <h2>First launch</h2>
+      <details>
+        <summary>macOS: "Apple could not verify Stek"</summary>
+        <p>Stek isn't notarized by Apple yet. Drag Stek from the .dmg into Applications and open it once. Then go to <strong>System Settings → Privacy &amp; Security</strong>, scroll down and click <strong>Open Anyway</strong>.</p>
+        <p>If macOS says the app "is damaged", run this once in Terminal: <code>xattr -dr com.apple.quarantine /Applications/Stek.app</code></p>
+      </details>
+      <details>
+        <summary>Windows: "Windows protected your PC"</summary>
+        <p>The installer isn't code-signed yet, so SmartScreen warns about it. Click <strong>More info → Run anyway</strong>.</p>
+      </details>
+      <details>
+        <summary>Linux: installing</summary>
+        <ul>
+          <li><strong>.deb:</strong> <code>sudo apt install ./Stek-*-linux-amd64.deb</code>, then open Stek from your app menu.</li>
+          <li><strong>AppImage:</strong> <code>chmod +x Stek-*.AppImage</code> and run it. Ubuntu 22.04+ needs FUSE first: <code>sudo apt install libfuse2</code> (24.04 and newer: <code>libfuse2t64</code>).</li>
+        </ul>
+      </details>
+    </section>
+
+    <section id="features">
+      <h2>What's inside</h2>
+      <div class="features">
+        <div class="feature"><h3>Every timeframe</h3><p>1-minute to monthly candles, with years of history stored locally so charts open instantly.</p></div>
+        <div class="feature"><h3>Drawing tools</h3><p>Trendlines, channels, Fibonacci, shapes, half circles and a freehand brush. Saved per symbol, steady across timeframes.</p></div>
+        <div class="feature"><h3>Indicators</h3><p>MA, EMA, Bollinger Bands, SAR, volume, MACD, RSI, KDJ, OBV, CCI and Williams %R.</p></div>
+        <div class="feature"><h3>Bar replay</h3><p>Rewind to any date and step through the market bar by bar.</p></div>
+        <div class="feature"><h3>Search almost anything</h3><p>Stocks, ETFs, mutual funds, indexes, crypto, FX and futures from exchanges worldwide.</p></div>
+        <div class="feature"><h3>Live prices</h3><p>Free polled quotes out of the box, or real-time streaming from your Interactive Brokers account.</p></div>
+      </div>
+    </section>
+
+    <footer>
+      <p><a href="https://github.com/imperiumthenum-coder/stek">Source on GitHub</a> · MIT license · Charts by <a href="https://github.com/klinecharts/KLineChart">KLineChart</a></p>
+      <p>For charting and research only, not investment advice. Market data may be delayed or inaccurate.<br />Not affiliated with TradingView, Yahoo or Interactive Brokers.</p>
+    </footer>
+  </div>
+
+  <script>
+    (function () {
+      var REPO = 'imperiumthenum-coder/stek';
+      var RELEASES = 'https://github.com/' + REPO + '/releases/latest';
+
+      // Which installer fits this visitor
+      function detectOS() {
+        var ua = navigator.userAgent || '';
+        var platform = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '';
+        if (/iPhone|iPad|iPod|Android/i.test(ua)) return 'mobile';
+        if (/Win/i.test(platform) || /Windows/i.test(ua)) return 'windows';
+        if (/Mac/i.test(platform) || /Macintosh/i.test(ua)) return 'mac';
+        if (/Linux|X11|CrOS/i.test(platform + ua)) return 'linux';
+        return 'unknown';
+      }
+
+      var KINDS = [
+        { os: 'mac', test: /mac-arm64\.dmg$/i, label: 'Apple Silicon .dmg' },
+        { os: 'windows', test: /win-x64\.exe$/i, label: 'Installer .exe' },
+        { os: 'linux', test: /\.AppImage$/i, label: 'AppImage' },
+        { os: 'linux', test: /\.deb$/i, label: '.deb package' }
+      ];
+      var NAMES = { mac: 'macOS', windows: 'Windows', linux: 'Linux' };
+
+      function mb(bytes) { return Math.round(bytes / 1048576) + ' MB'; }
+
+      function render(release) {
+        var byOs = { mac: [], windows: [], linux: [] };
+        (release.assets || []).forEach(function (a) {
+          KINDS.forEach(function (k) {
+            if (k.test.test(a.name)) byOs[k.os].push({ url: a.browser_download_url, label: k.label, size: a.size });
+          });
+        });
+
+        Object.keys(byOs).forEach(function (os) {
+          var box = document.querySelector('[data-files="' + os + '"]');
+          box.innerHTML = '';
+          if (!byOs[os].length) {
+            box.innerHTML = '<a class="file" href="' + RELEASES + '"><span>See releases</span><span></span></a>';
+            return;
+          }
+          byOs[os].forEach(function (f) {
+            var a = document.createElement('a');
+            a.className = 'file';
+            a.href = f.url;
+            a.innerHTML = '<span></span><span></span>';
+            a.children[0].textContent = f.label;
+            a.children[1].textContent = mb(f.size);
+            box.appendChild(a);
+          });
+        });
+
+        var version = (release.tag_name || '').replace(/^v/, '');
+        var date = release.published_at ? new Date(release.published_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '';
+        document.getElementById('release-line').innerHTML =
+          'Latest: <strong>v' + version + '</strong>' + (date ? ' · ' + date : '') +
+          ' · <a href="' + release.html_url + '">Release notes</a> · <a href="https://github.com/' + REPO + '/releases">All versions</a>';
+
+        var os = detectOS();
+        var primary = document.getElementById('primary');
+        var label = document.getElementById('primary-label');
+        var meta = document.getElementById('primary-meta');
+        var note = document.getElementById('primary-note');
+        var pick = byOs[os] && byOs[os][0];
+
+        if (pick) {
+          primary.href = pick.url;
+          label.textContent = 'Download for ' + NAMES[os];
+          meta.innerHTML = 'v' + version + ' · ' + pick.label + ' · ' + mb(pick.size) + ' · <a href="#download">Other platforms</a>';
+          document.querySelector('.card[data-os="' + os + '"]').classList.add('current');
+          if (os === 'mac') {
+            // Browsers report Intel Macs and Apple Silicon Macs the same way, so say it plainly
+            note.textContent = 'Requires an Apple Silicon Mac (M1 or newer). Intel Macs are not supported.';
+            note.hidden = false;
+          }
+        } else {
+          primary.href = '#download';
+          label.textContent = 'Choose your download';
+          meta.textContent = os === 'mobile'
+            ? 'Stek is a desktop app for macOS, Windows and Linux.'
+            : 'v' + version + ' for macOS (Apple Silicon), Windows and Linux';
+        }
+      }
+
+      fetch('https://api.github.com/repos/' + REPO + '/releases/latest', { headers: { Accept: 'application/vnd.github+json' } })
+        .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(render)
+        .catch(function () {
+          // API unreachable or rate-limited: every link still goes to the releases page
+          document.querySelectorAll('[data-files]').forEach(function (box) {
+            box.innerHTML = '<a class="file" href="' + RELEASES + '"><span>Get it on GitHub Releases</span><span></span></a>';
+          });
+        });
+    })();
+  </script>
+</body>
+</html>

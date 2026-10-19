@@ -6,7 +6,7 @@ Open-source charting and technical analysis for your desktop. Candlestick charts
 
 ## Download
 
-Grab the latest installer from the **[Releases page](https://github.com/imperiumthenum-coder/stek/releases/latest)**:
+**[Download Stek](https://imperiumthenum-coder.github.io/stek/)**, or grab an installer from the **[Releases page](https://github.com/imperiumthenum-coder/stek/releases/latest)**:
 
 | Platform | File |
 |---|---|
