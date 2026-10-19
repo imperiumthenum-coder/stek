@@ -1,0 +1,28 @@
+{
+  "name": "stek-backend",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/dev.ts",
+    "start": "tsx src/dev.ts",
+    "migrate:postgres": "tsx scripts/migrate-from-postgres.ts"
+  },
+  "dependencies": {
+    "@stoqey/ib": "1.6.12",
+    "better-sqlite3": "13.0.3",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "7.6.12",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.0",
+    "@types/pg": "^8.11.10",
+    "@types/ws": "^8.5.13",
+    "pg": "^8.13.3",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}

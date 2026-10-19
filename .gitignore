@@ -1,0 +1,21 @@
+# Dependencies and build output
+node_modules/
+dist/
+desktop/release/
+
+# Local data: price database, drawings, archives
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# Old Postgres/Redis setup (replaced by SQLite); kept locally only
+nvme-data/
+docker-compose.yml
+init.sql
+
+# Misc
+.env
+.env.*
+*.log
+.DS_Store

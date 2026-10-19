@@ -1,0 +1,100 @@
+{
+  "name": "stek",
+  "productName": "Stek",
+  "version": "0.1.0",
+  "description": "Open-source charting and technical analysis desktop app",
+  "homepage": "https://github.com/imperiumthenum-coder/stek",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/imperiumthenum-coder/stek.git"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Stek contributors",
+    "email": "323013362+imperiumthenum-coder@users.noreply.github.com"
+  },
+  "desktopName": "stek.desktop",
+  "private": true,
+  "main": "dist/main.cjs",
+  "scripts": {
+    "build:web": "npm --prefix ../frontend run build",
+    "build:main": "node build.mjs",
+    "build": "npm run build:web && npm run build:main",
+    "start": "npm run build && electron .",
+    "dist": "npm run build && electron-builder --publish never",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "dependencies": {
+    "better-sqlite3": "13.0.3"
+  },
+  "devDependencies": {
+    "electron": "44.5.1",
+    "electron-builder": "26.15.3",
+    "esbuild": "0.25.12"
+  },
+  "build": {
+    "appId": "app.stek.desktop",
+    "productName": "Stek",
+    "artifactName": "Stek-${version}-${os}-${arch}.${ext}",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../frontend/dist",
+        "to": "web"
+      }
+    ],
+    "afterPack": "scripts/adhoc-sign.cjs",
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ],
+      "category": "public.app-category.finance",
+      "identity": null
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "category": "Finance",
+      "maintainer": "Stek contributors <323013362+imperiumthenum-coder@users.noreply.github.com>",
+      "syncDesktopName": true
+    }
+  }
+}
