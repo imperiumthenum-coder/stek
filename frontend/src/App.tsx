@@ -3,11 +3,14 @@ import { init, dispose, Chart } from 'klinecharts';
 import {
   TrendingUp, Magnet, Trash2, Play, Pause, SkipForward,
   Layers, Search, Save, RotateCcw, Lock, Unlock, Maximize2, Eye, EyeOff, ChevronDown, Plus, Minus, Check,
-  PenLine, Activity, List, Shapes, X
+  PenLine, Activity, List, Shapes, X, Gauge
 } from 'lucide-react';
 import { registerTradingViewOverlays } from './tvOverlays';
+import { registerCustomIndicators } from './indicators';
+import MarketPulse from './MarketPulse';
 
 registerTradingViewOverlays();
+registerCustomIndicators();
 
 const DEFAULT_WATCHLIST = [
   { symbol: 'SPY', name: 'S&P 500 ETF' },
@@ -155,8 +158,8 @@ function resetPriceScale(chart: Chart) {
   (chart as any).adjustPaneViewport?.(false, true, true, true);
 }
 
-const MAIN_INDICATORS = ['MA', 'EMA', 'BOLL', 'SAR'];
-const SUB_INDICATORS = ['VOL', 'MACD', 'RSI', 'KDJ', 'OBV', 'CCI', 'WR'];
+const MAIN_INDICATORS = ['MA', 'EMA', 'SMA125', 'BOLL', 'SAR'];
+const SUB_INDICATORS = ['VOL', 'MOM125', 'MACD', 'RSI', 'KDJ', 'OBV', 'CCI', 'WR'];
 
 const TOOL_GROUPS = [
   {
@@ -230,6 +233,7 @@ export default function App() {
   const [activeHint, setActiveHint] = useState<string>('Pick a drawing tool, then click or tap the chart');
 
   const [isManagerOpen, setIsManagerOpen] = useState(false);
+  const [isPulseOpen, setIsPulseOpen] = useState(false);
   // Phone layout: sidebars become bottom sheets opened from a tab bar
   const [mobilePanel, setMobilePanel] = useState<null | 'tools' | 'indicators' | 'watchlist' | 'objects' | 'replay'>(
     null
@@ -751,6 +755,17 @@ export default function App() {
     setSearchResults([]);
   };
 
+  // From Market Pulse: daily chart with the 125-day average and momentum switched on
+  const openPulseChart = (sym: string) => {
+    setIsPulseOpen(false);
+    setMobilePanel(null);
+    selectSecurity(sym);
+    setIntervalState('1D');
+    if (sym !== '^VIX') {
+      setActiveIndicators((prev) => [...prev, ...['SMA125', 'MOM125'].filter((i) => !prev.includes(i))]);
+    }
+  };
+
   const inWatchlist = (sym: string) => watchlist.some((w) => w.symbol === sym.toUpperCase());
   const addToWatchlist = (sym: string, name: string) => {
     const clean = sym.toUpperCase();
@@ -1162,6 +1177,15 @@ export default function App() {
 
         <div className="flex items-center gap-2 shrink-0">
           <button
+            onClick={() => setIsPulseOpen(true)}
+            className="hidden md:flex items-center gap-1 bg-[#3987e5]/15 hover:bg-[#3987e5]/25 text-[#8fbaf5] px-2.5 py-1 rounded text-xs font-medium border border-[#3987e5]/40"
+            title="Market Pulse: momentum, strength, breadth and Fear & Greed score"
+          >
+            <Gauge className="w-3.5 h-3.5" />
+            Market
+          </button>
+
+          <button
             onClick={resetChartView}
             className="hidden md:flex items-center gap-1 bg-[#2a2e39] hover:bg-[#363a45] text-slate-200 px-2.5 py-1 rounded text-xs font-medium border border-[#363a45]"
             title="Reset Chart View & Bring Focus to Live Candles"
@@ -1362,6 +1386,16 @@ export default function App() {
 
       {/* Phone: tab bar + bottom sheets */}
       <nav className="md:hidden flex border-t border-[#2a2e39] bg-[#1e222d] shrink-0 pb-[env(safe-area-inset-bottom)]">
+        <button
+          onClick={() => {
+            setMobilePanel(null);
+            setIsPulseOpen(true);
+          }}
+          className={`flex-1 flex flex-col items-center gap-0.5 py-2 text-[10px] ${isPulseOpen ? 'text-[#2962ff]' : 'text-slate-400'}`}
+        >
+          <Gauge className="w-5 h-5" />
+          Market
+        </button>
         {MOBILE_TABS.map(({ id, label, icon: Icon }) => {
           const active = mobilePanel === id || (id === 'tools' && brushMode);
           return (
@@ -1382,6 +1416,8 @@ export default function App() {
           );
         })}
       </nav>
+
+      <MarketPulse open={isPulseOpen} onClose={() => setIsPulseOpen(false)} onOpenChart={openPulseChart} />
 
       {mobilePanel && (
         <div className="md:hidden fixed inset-0 z-40" onClick={() => setMobilePanel(null)}>

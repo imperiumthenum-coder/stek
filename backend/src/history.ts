@@ -159,7 +159,8 @@ export class HistoryStore {
 
   // Bring stored history up to date. Only fetches bars since the newest stored one
   // (plus a few periods of overlap so the forming bar gets its final values).
-  sync(symbol: string, interval: string): Promise<void> {
+  // `initialRange` limits a symbol's first fetch (e.g. '3y' instead of all history)
+  sync(symbol: string, interval: string, initialRange?: string): Promise<void> {
     const key = `${symbol}:${interval}`;
     const running = this.inflight.get(key);
     if (running) return running;
@@ -170,7 +171,8 @@ export class HistoryStore {
       const newestTs = (this.q.newest.get(symbol, interval) as { t: number | null }).t ?? 0;
       let span: string;
       if (!newestTs) {
-        span = cfg.initial === 'all' ? periodSpan(0) : `range=${cfg.initial}`;
+        const initial = initialRange ?? cfg.initial;
+        span = initial === 'all' ? periodSpan(0) : `range=${initial}`;
       } else {
         span = periodSpan(newestTs - 6 * cfg.periodMs);
       }

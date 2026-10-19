@@ -6,6 +6,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { LiveHub, toIbContract } from './marketData';
 import { HistoryStore, INTERVALS, startPrefetcher, scheduleDailyArchive } from './history';
 import { openDb, getSetting, setSetting } from './db';
+import { MarketPulse } from './marketPulse';
 
 export interface ServerOptions {
   dataDir: string; // where stek.db lives
@@ -57,6 +58,18 @@ export async function startServer(opts: ServerOptions) {
 
   const prefetchTimer = startPrefetcher(history, () => getSetting<string[]>(db, 'watchlist', ['SPY']));
   const archiveTimer = scheduleDailyArchive(history, archiveDir, opts.archiveHour ?? 3);
+
+  // Fear & Greed-style market gauges (momentum, new highs/lows, breadth, VIX, ...)
+  const pulse = new MarketPulse(history);
+  const pulseTimer = pulse.start();
+  app.get('/api/market-pulse', (_req, res) => {
+    try {
+      res.json(pulse.compute());
+    } catch (e) {
+      console.error('market pulse error:', e);
+      res.status(500).json({ ready: false, message: 'Could not compute market data' });
+    }
+  });
 
   app.post('/api/archive/run', async (_req, res) => {
     try {
@@ -160,6 +173,7 @@ export async function startServer(opts: ServerOptions) {
     close: () => {
       clearInterval(prefetchTimer);
       clearInterval(archiveTimer);
+      clearInterval(pulseTimer);
       wss.close();
       server.close();
       db.close();
